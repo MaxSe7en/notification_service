@@ -21,7 +21,7 @@ Timer::tick(5000, function () {
 
     // (new NotificationController)->processAndSendNotices();
     foreach ($pending as $notification) {
-        echo "Sending notification to ...". $notification['user_id']. "\n";
+        echo "Sending notification to ...". json_encode($notification). "\n";
 
         $success = NotificationService::sendNotification(
             $notification['user_id'],

@@ -31,7 +31,7 @@ class NotificationService
             return false;
         }
         echo "Connected to TCP socket successfully\n";
-        echo "Sending notification for user $userId: $message\n";
+        echo "Sending notification for user $userId: $message: $event \n";
 
         $data = json_encode(["action" => "send_notification", "user_id" => $userId, "message" => $message, "event"=> $event])."\n";
         $bytesWritten = fwrite($socket, $data);

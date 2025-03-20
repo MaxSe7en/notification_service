@@ -111,7 +111,7 @@ $port->on("receive", function ($port, $fd, $reactorId, $data) use ($server, $use
         if (isset($notification['action']) && $notification['action'] === 'send_notification') {
             $userId = (int) $notification['user_id'];
             $message = $notification['message'];
-            $event = $notification['n_event'];
+            $event = $notification['event'];
 
             echo "TCP Listener: Forwarding notification for user $userId\n";
 
