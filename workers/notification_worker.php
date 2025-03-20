@@ -7,7 +7,7 @@ use Swoole\Process;
 use App\Models\Notification;
 use App\Config\DatabaseAccessors;
 use App\Services\NotificationService;
-
+use App\Controllers\NotificationController;
 require 'vendor/autoload.php';
 
 echo "Starting Notification Worker...\n";
@@ -18,12 +18,15 @@ Timer::tick(5000, function () {
     $notificationModel = new Notification();
     $pending = $notificationModel->getPendingNotifications();
     // print_r($pending);
+
+    // (new NotificationController)->processAndSendNotices();
     foreach ($pending as $notification) {
         echo "Sending notification to ...". $notification['user_id']. "\n";
 
         $success = NotificationService::sendNotification(
             $notification['user_id'],
             $notification['type'],
+            $notification['n_event'],
             $notification['message']
         );
 

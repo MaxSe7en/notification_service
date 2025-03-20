@@ -27,14 +27,14 @@ $server->on("open", function ($server, $request) use ($userTable) {
     }
 });
 
-$server->on("message", function ($server, $frame) use ($userTable){
+$server->on("message", function ($server, $frame) use ($userTable) {
     echo "Received message from client: {$frame->data}\n";
     $data = json_decode($frame->data, true);
     print_r($data);
     if ($data && isset($data['action']) && $data['action'] === 'send_notification') {
         $userId = (int) $data['user_id'];
-        $message = "Socket new man";//$data['message'];
-        sendNotificationToUser($server, $userId, $message, $userTable);
+        $message = "Socket new man"; //$data['message'];
+        sendNotificationToUser($server, $userId, $message, $userTable, "normal");
     }
 });
 
@@ -45,7 +45,8 @@ $server->on("receive", function ($server, $fd, $reactor_id, $data) use ($userTab
     if ($notification && isset($notification['action']) && $notification['action'] === 'send_notification') {
         $userId = (int) $notification['user_id'];
         $message = $notification['message'];
-        sendNotificationToUser($server, $userId, $message, $userTable);
+        $event = $notification['event'];
+        sendNotificationToUser($server, $userId, $message, $userTable, $event);
     }
 });
 
@@ -69,11 +70,11 @@ function sendNotificationToUser22($server, $userId, $message, $userTable)
         echo "User $userId not connected\n";
     }
 }
-function sendNotificationToUser($server, $userId, $message, $userTable)
+function sendNotificationToUser($server, $userId, $message, $userTable, $event)
 {
     if ($userTable->exists($userId)) {
         $fd = $userTable->get($userId, 'fd');
-        $result = $server->push($fd, json_encode(["user_id" => $userId, "message" => $message]));
+        $result = $server->push($fd, json_encode(["user_id" => $userId, "message" => $message, "event" => $event]));
         echo "Sent notification to User $userId\n";
         return $result;
     } else {
@@ -107,28 +108,29 @@ $port->on("receive", function ($port, $fd, $reactorId, $data) use ($server, $use
             return;
         }
 
-    if (isset($notification['action']) && $notification['action'] === 'send_notification') {
-        $userId = (int) $notification['user_id'];
-        $message = $notification['message'];
-        
-        echo "TCP Listener: Forwarding notification for user $userId\n";
+        if (isset($notification['action']) && $notification['action'] === 'send_notification') {
+            $userId = (int) $notification['user_id'];
+            $message = $notification['message'];
+            $event = $notification['n_event'];
 
-        if ($userTable->exists($userId)) {
-            $clientFd = $userTable->get($userId, 'fd');
-            $server->push($clientFd, json_encode([
-                "type" => "notification", 
-                "user_id" => $userId, 
-                "message" => $message
-            ]));
-            echo "Sent notification to User $userId (FD: $clientFd)\n";
-        } else {
-            echo "User $userId not connected to WebSocket\n";
+            echo "TCP Listener: Forwarding notification for user $userId\n";
+
+            if ($userTable->exists($userId)) {
+                $clientFd = $userTable->get($userId, 'fd');
+                $server->push($clientFd, json_encode([
+                    "type" => "notification",
+                    "user_id" => $userId,
+                    "message" => $message,
+                    "event" => $event
+                ]));
+                echo "Sent notification to User $userId (FD: $clientFd)\n";
+            } else {
+                echo "User $userId not connected to WebSocket\n";
+            }
         }
-    }
     } catch (\Exception $e) {
         echo "ERROR in TCP listener: " . $e->getMessage() . "\n";
     }
-    
 });
 
 $GLOBALS['userTable'] = $userTable;

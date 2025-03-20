@@ -7,11 +7,11 @@ use App\Config\DatabaseAccessors;
 class NotificationService
 {
 
-    public static function sendNotification($userId, $type, $message)
+    public static function sendNotification($userId, $type,$event, $message)
     {
         switch ($type) {
-            case 'in_app':
-                return self::sendInAppSocketFrontend($userId, $message);
+            case 'system':
+                return self::sendInAppSocketFrontend($userId, $message, $event);
             case 'sms':
                 return self::sendSMS($userId, $message);
             case 'email':
@@ -22,7 +22,7 @@ class NotificationService
         }
     }
 
-    private static function sendInAppSocketFrontend($userId, $message)
+    private static function sendInAppSocketFrontend($userId, $message, $event)
     {
         echo "Attempting to connect to TCP socket...\n";
         $socket = stream_socket_client("tcp://127.0.0.1:9503", $errno, $errstr, 30);
@@ -33,7 +33,7 @@ class NotificationService
         echo "Connected to TCP socket successfully\n";
         echo "Sending notification for user $userId: $message\n";
 
-        $data = json_encode(["action" => "send_notification", "user_id" => $userId, "message" => $message])."\n";
+        $data = json_encode(["action" => "send_notification", "user_id" => $userId, "message" => $message, "event"=> $event])."\n";
         $bytesWritten = fwrite($socket, $data);
         echo "Wrote $bytesWritten bytes to socket\n";
 
