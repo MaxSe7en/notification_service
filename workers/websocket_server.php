@@ -38,7 +38,6 @@ $server->on("message", function ($server, $frame) use ($userTable){
     }
 });
 
-// Handle notifications sent from the Swoole worker (stream socket)
 $server->on("receive", function ($server, $fd, $reactor_id, $data) use ($userTable) {
     $notification = json_decode($data, true);
     echo "TCP Listener received data: " . $data . "\n";
@@ -51,7 +50,6 @@ $server->on("receive", function ($server, $fd, $reactor_id, $data) use ($userTab
 });
 
 $server->on("close", function ($server, $fd) use ($userTable) {
-    // Remove user FD from the table when they disconnect
     foreach ($userTable as $userId => $row) {
         if ($row['fd'] === $fd) {
             $userTable->del($userId);
@@ -61,7 +59,6 @@ $server->on("close", function ($server, $fd) use ($userTable) {
     }
 });
 
-// Function to send a notification to a specific user
 function sendNotificationToUser22($server, $userId, $message, $userTable)
 {
     if ($userTable->exists($userId)) {
@@ -88,11 +85,11 @@ function sendNotificationToUser($server, $userId, $message, $userTable)
 $port = $server->addlistener("127.0.0.1", 9503, SWOOLE_SOCK_TCP);
 echo "TCP Listener started on 127.0.0.1:9503\n";
 $port->set([
-    'open_length_check' => true,
-    'package_length_type' => 'N', // Unsigned long (32-bit, big-endian)
-    'package_length_offset' => 0,
-    'package_body_offset' => 4,
-    // 'package_max_length' => 1024 * 1024, // 1MB
+    // 'open_length_check' => true,
+    // 'package_length_type' => 'N', // Unsigned long (32-bit, big-endian)
+    // 'package_length_offset' => 0,
+    // 'package_body_offset' => 4,
+    // // 'package_max_length' => 1024 * 1024, // 1MB
     'open_eof_check' => true,
     'package_eof' => "\n",
 ]);
@@ -102,13 +99,6 @@ $port->on('connect', function ($serv, $fd, $from_id) {
 });
 
 $port->on("receive", function ($port, $fd, $reactorId, $data) use ($server, $userTable) {
-    // Notice we're using $port as the parameter, but $server for pushing messages
-    echo "TCP Listener received data: " . $data . "\n";
-    echo "=============================================\n";
-    echo "TCP LISTENER RECEIVED DATA AT " . date('Y-m-d H:i:s') . "\n";
-    echo "Data received: " . $data . "\n";
-    echo "Data length: " . strlen($data) . "\n";
-    echo "=============================================\n";
     try {
         $notification = json_decode(trim($data), true);
 
@@ -122,8 +112,7 @@ $port->on("receive", function ($port, $fd, $reactorId, $data) use ($server, $use
         $message = $notification['message'];
         
         echo "TCP Listener: Forwarding notification for user $userId\n";
-        
-        // Use the WebSocket server to push the message
+
         if ($userTable->exists($userId)) {
             $clientFd = $userTable->get($userId, 'fd');
             $server->push($clientFd, json_encode([

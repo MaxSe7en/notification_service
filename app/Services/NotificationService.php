@@ -9,7 +9,6 @@ class NotificationService
 
     public static function sendNotification($userId, $type, $message)
     {
-        // Dispatch the notification
         switch ($type) {
             case 'in_app':
                 return self::sendInAppSocketFrontend($userId, $message);
@@ -38,10 +37,7 @@ class NotificationService
         $bytesWritten = fwrite($socket, $data);
         echo "Wrote $bytesWritten bytes to socket\n";
 
-        // Add this to ensure data is actually sent
         fflush($socket);
-
-        // Wait a moment to ensure data is processed
         usleep(100000); // 100ms
 
         fclose($socket);

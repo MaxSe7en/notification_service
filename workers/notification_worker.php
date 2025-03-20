@@ -19,7 +19,6 @@ Timer::tick(5000, function () {
     $pending = $notificationModel->getPendingNotifications();
     // print_r($pending);
     foreach ($pending as $notification) {
-        // Logic to send notification (email/SMS)
         echo "Sending notification to ...". $notification['user_id']. "\n";
 
         $success = NotificationService::sendNotification(
@@ -28,7 +27,6 @@ Timer::tick(5000, function () {
             $notification['message']
         );
 
-        // Update status use better query builders for bulk updates
         $status = $success ? 'sent' : 'failed';
         $db->update("UPDATE notifications SET status = ? WHERE id = ?", [$status, $notification['id']]);
 
@@ -37,5 +35,4 @@ Timer::tick(5000, function () {
     }
 });
 
-// Keep the process running
 Process::wait();
