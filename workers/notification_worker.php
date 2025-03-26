@@ -4,7 +4,7 @@ use Swoole\Timer;
 use Swoole\Process;
 
 
-use App\Models\Notification;
+use App\Models\NotificationModel;
 use App\Config\DatabaseAccessors;
 use App\Services\NotificationService;
 use App\Controllers\NotificationController;
@@ -15,7 +15,7 @@ echo "Starting Notification Worker...\n";
 Timer::tick(5000, function () {
     $db = new DatabaseAccessors();
     echo "Started ticking Worker...\n";
-    $notificationModel = new Notification();
+    $notificationModel = new NotificationModel();
     $pending = $notificationModel->getPendingNotifications();
     // print_r($pending);
 

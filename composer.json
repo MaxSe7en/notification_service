@@ -2,7 +2,8 @@
     "name": "enzerhub/notification_sender",
     "version": "1.0.0",
     "require": {
-        "swoole/ide-helper": "^6.0"
+        "swoole/ide-helper": "^6.0",
+        "monolog/monolog": "^3.9"
     },
     "autoload": {
         "psr-4": {

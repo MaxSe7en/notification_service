@@ -44,6 +44,7 @@ class NotificationService
         echo "Socket connection closed\n";
         return true;
     }
+
     private static function sendSMS($userId, $message)
     {
         // Example: Twilio API

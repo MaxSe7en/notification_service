@@ -3,9 +3,10 @@
 namespace App\Models;
 
 use PDO;
+use PDOException;
 use App\Config\Database;
 
-class Notification
+class NotificationModel
 {
     private $db;
 
@@ -69,8 +70,48 @@ class Notification
     }
 
     public function markNoticeAsSent($msgId)
-{
-    $stmt = $this->db->prepare("UPDATE notices SET ms_status = 'sent' WHERE msg_id = :msgId");
-    $stmt->execute([':msgId' => $msgId]);
-}
+    {
+        $stmt = $this->db->prepare("UPDATE notices SET ms_status = 'sent' WHERE msg_id = :msgId");
+        $stmt->execute([':msgId' => $msgId]);
+    }
+
+    public function getNotificationCounts(string $userId)
+    {
+        try {
+            // Query to count all notifications
+            $totalStmt = $this->db->query("SELECT COUNT(*) as total FROM notifications");
+            $totalCount = $totalStmt->fetch(PDO::FETCH_ASSOC);
+
+            // Query to count all general notices
+            $generalStmt = $this->db->query("SELECT COUNT(*) as general FROM notices WHERE ms_type = 'general'");
+            $generalCount = $generalStmt->fetch(PDO::FETCH_ASSOC);
+
+            // Prepare personal notifications query with parameterized statement
+            $personalStmt = $this->db->prepare("
+                SELECT COUNT(*) as personal
+                FROM notices
+                LEFT JOIN notice_users ON notices.msg_id = notice_users.msg_id
+                WHERE notices.ms_type != 'general'
+                AND notices.ms_status = 'active'
+                AND notice_users.user_id = :userId
+            ");
+            $personalStmt->bindParam(':userId', $userId, PDO::PARAM_STR);
+            $personalStmt->execute();
+            $personalCount = $personalStmt->fetch(PDO::FETCH_ASSOC);
+
+            return [
+                'system_notifications' => $totalCount['total'] ?? 0,
+                'general_notices' => $generalCount['general'] ?? 0,
+                'personal_notifications' => $personalCount['personal'] ?? 0
+            ];
+        } catch (PDOException $e) {
+            // Log the error or handle it appropriately
+            error_log('Notification count error: ' . $e->getMessage());
+            return [
+                'system_notifications' => 0,
+                'general_notices' => 0,
+                'personal_notifications' => 0
+            ];
+        }
+    }
 }
