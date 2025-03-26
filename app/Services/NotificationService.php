@@ -2,10 +2,24 @@
 
 namespace App\Services;
 
+use Exception;
+use Console;
+
 use App\Config\DatabaseAccessors;
+use App\Models\NotificationModel;
+
+// use Swoole\Coroutine\Http\Client;
+use Swoole\WebSocket\Server;
+use \Predis\Client;
 
 class NotificationService
 {
+    // private $server;
+
+    // public function __construct(Server $server) {
+    //     $this->server = $server;
+    // }
+
 
     public static function sendNotification($userId, $type,$event, $message)
     {
@@ -20,6 +34,37 @@ class NotificationService
             default:
                 return false;
         }
+    }
+
+
+    public static function queueNotification($userId, $message)
+    {
+        $redisCache = new Client();
+        $redisCache->rpush("notification_queue:{$userId}", $message);
+    }
+
+    // public function sendCountsNotification($userId, $fd, $message)
+    // {
+    //     try {
+    //         if ($this->server->exist($fd)) {
+    //             return $this->server->push($fd, $message);
+    //         }
+    //     } catch (Exception $e) {
+    //         Console::log2("Notification push error: ", $e);
+    //     }
+    //     return false;
+    // }
+
+    public static function sendStaticCountsNotification(Server $server, $userId, $fd, $message)
+    {
+        try {
+            if ($server->exist($fd)) {
+                return $server->push($fd, $message);
+            }
+        } catch (Exception $e) {
+            Console::log2("Notification push error: ", $e);
+        }
+        return false;
     }
 
     private static function sendInAppSocketFrontend($userId, $message, $event)
@@ -68,4 +113,21 @@ class NotificationService
         //     return false;
         // }
     }
+
+    // public function sendRealTimeUpdate(string $userId)
+    // {
+    //     $notification = new NotificationModel();
+    //     $notificationCount = $notification->getNotificationCounts($userId);
+
+    //     // Send WebSocket message to user
+    //     go(function () use ($userId, $notificationCount) {
+    //         $client = new Client("127.0.0.1", 9502);
+    //         $client->upgrade("/");
+    //         $client->push(json_encode([
+    //             'userId' => $userId,
+    //             'notificationCount' => $notificationCount
+    //         ]));
+    //         $client->close();
+    //     });
+    // }
 }

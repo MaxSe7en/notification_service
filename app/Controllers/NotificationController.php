@@ -2,7 +2,7 @@
 
 namespace App\Controllers;
 
-use App\Models\Notification;
+use App\Models\NotificationModel;
 use App\Services\NotificationService;
 
 class NotificationController
@@ -12,13 +12,13 @@ class NotificationController
 
     public function __construct()
     {
-        $this->notification = new Notification();
+        $this->notification = new NotificationModel();
     }
 
 
     public function send($userId, $type, $message)
     {
-        $notification = new Notification();
+        $notification = new NotificationModel();
         return $notification->create($userId, $type, $message);
     }
 

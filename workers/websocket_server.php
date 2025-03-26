@@ -30,7 +30,7 @@ $server->on("open", function ($server, $request) use ($userTable) {
 $server->on("message", function ($server, $frame) use ($userTable) {
     echo "Received message from client: {$frame->data}\n";
     $data = json_decode($frame->data, true);
-    print_r($data);
+    // print_r($data);
     if ($data && isset($data['action']) && $data['action'] === 'send_notification') {
         $userId = (int) $data['user_id'];
         $message = "Socket new man"; //$data['message'];

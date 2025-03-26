@@ -17,7 +17,7 @@ class NotificationModel
 
     public function create($userId, $type, $message)
     {
-        $stmt = $this->db->prepare("INSERT INTO notifications (user_id, type, message, status) VALUES (?, ?, ?, 'pending')");
+        $stmt = $this->db->prepare("INSERT INTO notifications (user_id, ms_type, message, status) VALUES (?, ?, ?, 'pending')");
         return $stmt->execute([$userId, $type, $message]);
     }
 
@@ -78,15 +78,12 @@ class NotificationModel
     public function getNotificationCounts(string $userId)
     {
         try {
-            // Query to count all notifications
             $totalStmt = $this->db->query("SELECT COUNT(*) as total FROM notifications");
             $totalCount = $totalStmt->fetch(PDO::FETCH_ASSOC);
 
-            // Query to count all general notices
             $generalStmt = $this->db->query("SELECT COUNT(*) as general FROM notices WHERE ms_type = 'general'");
             $generalCount = $generalStmt->fetch(PDO::FETCH_ASSOC);
 
-            // Prepare personal notifications query with parameterized statement
             $personalStmt = $this->db->prepare("
                 SELECT COUNT(*) as personal
                 FROM notices
@@ -105,7 +102,6 @@ class NotificationModel
                 'personal_notifications' => $personalCount['personal'] ?? 0
             ];
         } catch (PDOException $e) {
-            // Log the error or handle it appropriately
             error_log('Notification count error: ' . $e->getMessage());
             return [
                 'system_notifications' => 0,
