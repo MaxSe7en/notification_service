@@ -15,8 +15,13 @@ use \Predis\Client;
 
 $redisCache = new Client(); // Connect to Redis
 
-$server = new Server("0.0.0.0", 9502);
 
+$server = new Server("0.0.0.0", 9502, SWOOLE_PROCESS, SWOOLE_SOCK_TCP | SWOOLE_SSL);
+$server->set([
+    'ssl_cert_file' => '/etc/letsencrypt/live/winsstarts.com/fullchain.pem',
+    'ssl_key_file' => '/etc/letsencrypt/live/winsstarts.com/privkey.pem',
+    'open_http2_protocol' => true, // Optional: Enable HTTP/2
+]);
 $server->on("open", function ($server, $request) use ($redisCache) {
     $queryString = $request->server['query_string'] ?? '';
     parse_str($queryString, $query);
