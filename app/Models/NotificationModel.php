@@ -104,7 +104,7 @@ class NotificationModel
             $personalStmt->bindParam(':userId', $userId, PDO::PARAM_STR);
             $personalStmt->execute();
             $personalCount = $personalStmt->fetch(PDO::FETCH_ASSOC);
-            Console::log2('countssss ', $generalNote);
+            // Console::log2('countssss ', $generalNote);
             return [
                 'system_notifications' => $totalCount['total'] ?? 0,
                 'general_notices' => $generalCount ?? 0,
