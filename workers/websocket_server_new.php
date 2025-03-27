@@ -6,6 +6,7 @@ use Swoole\Table;
 use Swoole\Timer;
 use Swoole\Server as TcpServer;
 
+use App\Exceptions\Console;
 use App\Config\DatabaseAccessors;
 use App\Models\NotificationModel;
 use App\Services\NotificationService;
@@ -29,20 +30,46 @@ $server->on("open", function ($server, $request) use ($redisCache) {
         echo "User $userId connected with FD {$request->fd}\n";
     }
 
-    swoole_timer_tick(1000, function() use ($server, $request, $redisCache) {
-        $userId = $request->get['userId'];
-        $queueKey = "notification_queue:{$userId}";
-        
-        while ($message = $redisCache->lpop($queueKey)) {
-            $server->push($request->fd, $message);
-        }
-    });
+    // swoole_timer_tick(1000, function() use ($server, $request, $redisCache) {
+    //     $userId = $request->get['userId'];
+    //     $queueKey = "notification_queue:{$userId}";
+    //     echo "Queue key: {$queueKey }\n";
+    //     while ($message = $redisCache->lpop($queueKey)) {
+    //         echo "Sending notification to User $userId: $message\n";
+    //         $server->push($request->fd, $message);
+    //     }
+    // });
 });
 
 $server->on("message", function ($server, $frame) use ($redisCache) {
     echo "Received message from client: {$frame->data}\n";
     $data = json_decode($frame->data, true);
-    // print_r($data);
+
+    // Start a timer to check for notifications when a client connects
+    swoole_timer_tick(1000, function () use ($server, $data, $frame, $redisCache) {
+
+        // echo "Sent notification to User ". json_encode(isset($data['user_id']));
+        if (isset($data['user_id'])) {
+            $userId = (int) $data['user_id'];
+
+            // Check for pending notifications in Redis
+            $notificationKey = "notification_queue:{$userId}";
+            $pendingNotification = $redisCache->lpop($notificationKey);
+
+            if ($pendingNotification) {
+                // Send the notification to the specific client
+                if ($server->exist($frame->fd)) {
+                    $server->push($frame->fd, $pendingNotification);
+                    echo "Sent notification counts to User $userId: $pendingNotification\n";
+                } else {
+                    echo "FD {$frame->fd} is no longer connected.\n";
+                }
+
+                echo "Sent notification to User $userId: $pendingNotification\n";
+            }
+        }
+    });
+    //for testing purposes
     if ($data && isset($data['action']) && $data['action'] === 'send_notification') {
         $userId = (int) $data['user_id'];
         $message = "Socket new man"; //$data['message'];
@@ -50,17 +77,17 @@ $server->on("message", function ($server, $frame) use ($redisCache) {
     }
 });
 
-$server->on("receive", function ($server, $fd, $reactor_id, $data) use ($redisCache) {
-    $notification = json_decode($data, true);
-    echo "TCP Listener received data: " . $data . "\n";
-    echo "=============================================\n";
-    if ($notification && isset($notification['action']) && $notification['action'] === 'send_notification') {
-        $userId = (int) $notification['user_id'];
-        $message = $notification['message'];
-        $event = $notification['event'];
-        sendNotificationToUser($server, $userId, $message, $redisCache, $event);
-    }
-});
+// $server->on("receive", function ($server, $fd, $reactor_id, $data) use ($redisCache) {
+//     $notification = json_decode($data, true);
+//     echo "TCP Listener received data: " . $data . "\n";
+//     echo "=============================================\n";
+//     if ($notification && isset($notification['action']) && $notification['action'] === 'send_notification') {
+//         $userId = (int) $notification['user_id'];
+//         $message = $notification['message'];
+//         $event = $notification['event'];
+//         sendNotificationToUser($server, $userId, $message, $redisCache, $event);
+//     }
+// });
 
 $server->on("close", function ($server, $fd) use ($redisCache) {
     $users = $redisCache->hgetall("connected_users");
@@ -74,28 +101,36 @@ $server->on("close", function ($server, $fd) use ($redisCache) {
 });
 
 
-function sendNotificationToUser22($server, $userId, $message, $redisCache)
-{
-    if ($redisCache->exists($userId)) {
-        $fd = $redisCache->get($userId, 'fd');
-        $server->push($fd, json_encode(["user_id" => $userId, "message" => $message]));
-        echo "Sent notification to User $userId\n";
-    } else {
-        echo "User $userId not connected\n";
-    }
-}
 function sendNotificationToUser($server, $userId, $message, $redisCache, $event)
 {
-    if ($redisCache->exists($userId)) {
-        $fd = $redisCache->get($userId, 'fd');
-        $result = $server->push($fd, json_encode(["user_id" => $userId, "message" => $message, "event" => $event]));
-        echo "Sent notification to User $userId\n";
-        return $result;
+    $redisKey = "connected_users"; // The key where connected users are stored
+    // Console::log2("-----------------> ",$redisCache->hExists($redisKey, $userId));
+    // Console::log2("-----------------> ",$userId);
+    if ($redisCache->hExists($redisKey, $userId)) {
+        $fd = $redisCache->hGet($redisKey, $userId); // Get the file descriptor
+        $newCounts = (new NotificationModel())->getNotificationCounts($userId);
+        // Ensure $fd is a valid number before sending the notification
+        if ($fd !== false && is_numeric($fd)) {
+            $result = $server->push($fd, json_encode([
+                "user_id" => $userId,
+                "message" => $newCounts,
+                "event" => 'notification_count'
+
+            ]));
+
+            echo "Sent notification to User $userId\n";
+            return $result;
+        } else {
+            $redisCache->hDel($redisKey, $userId);
+            echo "Invalid file descriptor for User $userId\n";
+            return false;
+        }
     } else {
         echo "User $userId not connected\n";
         return false;
     }
 }
+
 
 $port = $server->addlistener("127.0.0.1", 9503, SWOOLE_SOCK_TCP);
 echo "TCP Listener started on 127.0.0.1:9503\n";
@@ -129,15 +164,24 @@ $port->on("receive", function ($port, $fd, $reactorId, $data) use ($server, $red
 
             echo "TCP Listener: Forwarding notification for user $userId\n";
 
-            if ($redisCache->exists($userId)) {
-                $clientFd = $redisCache->get($userId, 'fd');
-                $server->push($clientFd, json_encode([
-                    "type" => "notification",
-                    "user_id" => $userId,
-                    "message" => $message,
-                    "event" => $event
-                ]));
-                echo "Sent notification to User $userId (FD: $clientFd)\n";
+            $redisKey = "connected_users"; // Redis hash key for WebSocket FDs
+
+            if ($redisCache->hExists($redisKey, $userId)) {
+                $clientFd = $redisCache->hGet($redisKey, $userId);
+
+                // Validate FD before pushing
+                if ($clientFd !== false && is_numeric($clientFd) && $server->exist((int)$clientFd)) {
+                    $server->push((int)$clientFd, json_encode([
+                        "type" => "notification",
+                        "user_id" => $userId,
+                        "message" => $message,
+                        "event" => $event
+                    ]));
+                    echo "Sent notification to User $userId (FD: $clientFd)\n";
+                } else {
+                    echo "Invalid or disconnected FD for User $userId\n";
+                    $redisCache->hDel($redisKey, $userId); // Remove stale FD
+                }
             } else {
                 echo "User $userId not connected to WebSocket\n";
             }
@@ -146,6 +190,7 @@ $port->on("receive", function ($port, $fd, $reactorId, $data) use ($server, $red
         echo "ERROR in TCP listener: " . $e->getMessage() . "\n";
     }
 });
+
 
 $GLOBALS['redisCache'] = $redisCache;
 

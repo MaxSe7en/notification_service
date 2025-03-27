@@ -12,7 +12,7 @@ use App\Controllers\NotificationController;
 require 'vendor/autoload.php';
 
 
-$redisCache = new Client(); // Connect to Redis
+$redisCache = new Client();
 
 echo "Starting Notification Worker...\n";
 
@@ -65,9 +65,11 @@ Timer::tick(5000, function () use ($redisCache) {
             $newCounts['personal_notifications'] != $lastCounts['personal_notifications'];
         $message = json_encode([
             'type' => 'notification_count',
-            'action' => $newCounts,
+            'message' => $newCounts,
+            'event' => 'notification_count',
             'user_id' => $userId
         ]);
+
         if ($countChanged) {
             NotificationService::queueNotification(
                 $userId,
@@ -80,7 +82,7 @@ Timer::tick(5000, function () use ($redisCache) {
         }
     }
 
-    // print_r($fd);
+    echo "Finished ticking Worker...\n";
 });
 
 Process::wait();

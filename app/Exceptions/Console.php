@@ -1,5 +1,5 @@
 <?php 
-
+namespace App\Exceptions;
 class Console{
 
     public static function logger($message) : void {

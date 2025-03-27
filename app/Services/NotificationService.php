@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use Exception;
-use Console;
+use App\Exceptions\Console;
 
 use App\Config\DatabaseAccessors;
 use App\Models\NotificationModel;
@@ -43,29 +43,6 @@ class NotificationService
         $redisCache->rpush("notification_queue:{$userId}", $message);
     }
 
-    // public function sendCountsNotification($userId, $fd, $message)
-    // {
-    //     try {
-    //         if ($this->server->exist($fd)) {
-    //             return $this->server->push($fd, $message);
-    //         }
-    //     } catch (Exception $e) {
-    //         Console::log2("Notification push error: ", $e);
-    //     }
-    //     return false;
-    // }
-
-    public static function sendStaticCountsNotification(Server $server, $userId, $fd, $message)
-    {
-        try {
-            if ($server->exist($fd)) {
-                return $server->push($fd, $message);
-            }
-        } catch (Exception $e) {
-            Console::log2("Notification push error: ", $e);
-        }
-        return false;
-    }
 
     private static function sendInAppSocketFrontend($userId, $message, $event)
     {
