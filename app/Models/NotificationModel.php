@@ -5,6 +5,7 @@ namespace App\Models;
 use PDO;
 use PDOException;
 use App\Config\Database;
+use App\Exceptions\Console;
 
 class NotificationModel
 {
@@ -75,31 +76,40 @@ class NotificationModel
         $stmt->execute([':msgId' => $msgId]);
     }
 
+    public function getGeneralNotices(){
+        $stmt = $this->db->query("SELECT * FROM notices WHERE ms_type = 'general'");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getNotificationCounts(string $userId)
     {
         try {
-            $totalStmt = $this->db->query("SELECT COUNT(*) as total FROM notifications");
+            $totalStmt = $this->db->prepare("SELECT COUNT(*) as total FROM notifications WHERE user_id = :userId AND read_status = 'unread'");
+            $totalStmt->bindParam(':userId', $userId, PDO::PARAM_STR);
+            $totalStmt->execute();
             $totalCount = $totalStmt->fetch(PDO::FETCH_ASSOC);
 
-            $generalStmt = $this->db->query("SELECT COUNT(*) as general FROM notices WHERE ms_type = 'general'");
-            $generalCount = $generalStmt->fetch(PDO::FETCH_ASSOC);
-
+            $generalStmt = $this->db->query("SELECT * FROM notices WHERE ms_type = 'general' AND ms_status = 'active'");
+            $generalNote = $generalStmt->fetchAll(PDO::FETCH_ASSOC);
+            $generalCount = count($generalNote);
             $personalStmt = $this->db->prepare("
                 SELECT COUNT(*) as personal
                 FROM notices
                 LEFT JOIN notice_users ON notices.msg_id = notice_users.msg_id
                 WHERE notices.ms_type != 'general'
                 AND notices.ms_status = 'active'
+                AND notice_users.read_status = 'unread'
                 AND notice_users.user_id = :userId
             ");
             $personalStmt->bindParam(':userId', $userId, PDO::PARAM_STR);
             $personalStmt->execute();
             $personalCount = $personalStmt->fetch(PDO::FETCH_ASSOC);
-
+            Console::log2('countssss ', $generalNote);
             return [
                 'system_notifications' => $totalCount['total'] ?? 0,
-                'general_notices' => $generalCount['general'] ?? 0,
-                'personal_notifications' => $personalCount['personal'] ?? 0
+                'general_notices' => $generalCount ?? 0,
+                'personal_notifications' => $personalCount['personal'] ?? 0,
+                'announcements' => $generalNote
             ];
         } catch (PDOException $e) {
             error_log('Notification count error: ' . $e->getMessage());

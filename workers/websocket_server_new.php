@@ -114,8 +114,8 @@ function sendNotificationToUser($server, $userId, $message, $redisCache, $event)
             $result = $server->push($fd, json_encode([
                 "user_id" => $userId,
                 "message" => $newCounts,
-                "event" => 'notification_count'
-
+                "event" => 'notification_count',
+                'type' => 'first_time',
             ]));
 
             echo "Sent notification to User $userId\n";
