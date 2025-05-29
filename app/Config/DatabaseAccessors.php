@@ -42,7 +42,7 @@ class DatabaseAccessors{
             $stmt = self::connect()->prepare($query);
             return $stmt->execute($params);
         } catch (PDOException $e) {
-            exit("Insert Error: " . $e->getMessage());
+            echo "Insert Error: " . $e->getMessage();
         }
     }
 
@@ -51,7 +51,8 @@ class DatabaseAccessors{
             $stmt = self::connect()->prepare($query);
             return $stmt->execute($params);
         } catch (PDOException $e) {
-            exit("Update Error: " . $e->getMessage());
+            // exit("Update Error: " . $e->getMessage());
+            echo 'Update Error'. $e->getMessage();
         }
     }
 
@@ -60,7 +61,7 @@ class DatabaseAccessors{
             $stmt = self::connect()->prepare($query);
             return $stmt->execute($params);
         } catch (PDOException $e) {
-            exit("Delete Error: " . $e->getMessage());
+            echo "Delete Error: " . $e->getMessage();
         }
     }
 }

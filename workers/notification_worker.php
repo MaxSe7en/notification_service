@@ -35,8 +35,10 @@ Timer::tick(5000, function () use ($redisCache) {
         );
 
         $status = $success ? 'sent' : 'failed';
-        $db->update("UPDATE notifications SET status = ? WHERE id = ?", [$status, $notification['id']]);
-
+        $updateResult = $db->update("UPDATE notifications SET status = ? WHERE id = ?", [$status, $notification['id']]);
+        if($updateResult){
+            echo "Failed to update status for notification ID {$notification['user_id']}";
+        }
         echo "Processed Notification ID: {$notification['id']} - Status: {$status}\n";
         echo "Sending: {$notification['message']}\n";
     }
