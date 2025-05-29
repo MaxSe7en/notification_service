@@ -2,3 +2,4 @@
 /app/Exceptions/log.txt
 /app/Exceptions/*.log
 /vendor
+/app/Config/Database.php
