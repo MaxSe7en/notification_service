@@ -22,7 +22,8 @@ class DatabaseAccessors{
             $stmt->execute($params);
             return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         } catch (PDOException $e) {
-            exit("Select Error: " . $e->getMessage());
+            echo "Select Error: " . $e->getMessage();
+            return null;
         }
     }
 
@@ -33,7 +34,8 @@ class DatabaseAccessors{
             $stmt->execute($params);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            exit("SelectAll Error: " . $e->getMessage());
+            echo "SelectAll Error: " . $e->getMessage();
+            return [];
         }
     }
 
@@ -43,6 +45,7 @@ class DatabaseAccessors{
             return $stmt->execute($params);
         } catch (PDOException $e) {
             echo "Insert Error: " . $e->getMessage();
+            return false;
         }
     }
 
@@ -53,6 +56,7 @@ class DatabaseAccessors{
         } catch (PDOException $e) {
             // exit("Update Error: " . $e->getMessage());
             echo 'Update Error'. $e->getMessage();
+            return false;
         }
     }
 
@@ -62,6 +66,7 @@ class DatabaseAccessors{
             return $stmt->execute($params);
         } catch (PDOException $e) {
             echo "Delete Error: " . $e->getMessage();
+            return false;
         }
     }
 }
